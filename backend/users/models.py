@@ -21,7 +21,7 @@ class User(AbstractUser):
         unique=True,
         verbose_name='Юзернэйм',
         validators=[RegexValidator(
-            r'^[\w.@+-]+\z$', 'Недопустимый символ.'
+            r'^[\w.@+-]+$', 'Недопустимый символ.'
         )],
     )
     firstname = models.CharField(
@@ -39,9 +39,10 @@ class User(AbstractUser):
         unique=True,
         verbose_name='Адрес электронной почты'
     )
-    is_subscribed = models.BooleanField(
-        default=False,
-        verbose_name='Подписан ли текущий пользователь на этого'
+    password = models.CharField(
+        max_length=settings.MAX_LEN_PASSWORD,
+        unique=True,
+        verbose_name='Пароль',
     )
     role = models.CharField(
         max_length=settings.MAX_LEN_ROLE,
@@ -64,6 +65,7 @@ class User(AbstractUser):
 
 
 class Subscription(models.Model):
+    """Модель подписок"""
     user = models.ForeignKey(
         User, related_name='subscription_user', on_delete=models.CASCADE
     )
