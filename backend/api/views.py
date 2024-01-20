@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from django.contrib.auth import get_user_model
 from rest_framework import status, viewsets
 from rest_framework.decorators import action

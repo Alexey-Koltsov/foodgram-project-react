@@ -4,7 +4,6 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-
 SECRET_KEY = 'django-insecure-dr4)dnv*gv!vs_%9jd(9sx=z_(80si1998#^t695*cejb^uca$'
 
 
@@ -101,6 +100,11 @@ USE_TZ = True
 
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'collected_static'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = '/media/images/'
+
 
 # User model
 
@@ -122,10 +126,6 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
-    'SERIALIZERS': {
-        'current_user': 'api.serializers.CustomUserSerializer',
-        #'user': 'api.serializers.CustomUserSerializer',
-    }
 }
 
 # Длины полей
