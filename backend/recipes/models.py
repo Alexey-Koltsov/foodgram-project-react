@@ -109,6 +109,9 @@ class Recipe(models.Model):
 class RecipeIngredient(models.Model):
     """Модель связи рецептов и ингредиентов"""
 
+    amount = models.PositiveIntegerField(
+        verbose_name='Количество'
+    )
     ingredient = models.ForeignKey(
         Ingredient,
         related_name='recipeingredient',
