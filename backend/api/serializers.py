@@ -232,7 +232,6 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         ingredients = validated_data.pop('ingredients', None)
         if ingredients is not None:
             instance.ingredients.clear()
-
             create_ingredients = [
                 RecipeIngredient(
                     recipe=instance,
@@ -244,6 +243,21 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             RecipeIngredient.objects.bulk_create(
                 create_ingredients
             )
+
+        tags = validated_data.pop('tags', None)
+        if tags is not None:
+            instance.tags.clear()
+            create_tags = [
+                RecipeTag(
+                    recipe=instance,
+                    tag=tag['tag'],
+                )
+                for tag in tags
+            ]
+            RecipeTag.objects.bulk_create(
+                create_tags
+            )
+
         return super().update(instance, validated_data)
 
     def to_representation(self, obj):

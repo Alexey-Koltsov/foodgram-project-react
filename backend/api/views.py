@@ -90,12 +90,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        request.data['tags'] = [
+            {'id': tag_id} for tag_id in request.data['tags']
+        ]
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
             return RecipeCreateUpdateSerializer
         return RecipeListSerializer
 
-    def get_queryset(self):
+    """def get_queryset(self):
         qs = Recipe.objects.add_user_annotations(self.request.user.pk)
 
         # Фильтры из GET-параметров запроса, например.
@@ -103,4 +114,4 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if author:
             qs = qs.filter(author=author)
 
-        return qs
+        return qs"""

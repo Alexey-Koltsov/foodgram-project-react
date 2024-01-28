@@ -1,0 +1,32 @@
+GET http://127.0.0.1:8000/api/recipes/
+Content-Type: application/json
+Authorization: Token c4f4861504d2c586c2dad9d3d66978ed04f36626
+
+###
+
+POST http://127.0.0.1:8000/api/recipes/
+Content-Type: application/json
+Authorization: Token c4f4861504d2c586c2dad9d3d66978ed04f36626
+
+
+{
+  "ingredients": [
+    {
+      "id": 2180,
+      "amount": 3
+    },
+    {
+      "id": 1264,
+      "amount": 1
+    }
+  ],
+  "tags": [
+    1,
+    2,
+    3
+  ],
+  "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAgMAAABieywaAAAACVBMVEUAAAD///9fX1/S0ecCAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAACklEQVQImWNoAAAAggCByxOyYQAAAABJRU5ErkJggg==",
+  "name": "Яичница",
+  "text": "Очень вкусное и простое в приготовлении блюдо",
+  "cooking_time": 5
+}
