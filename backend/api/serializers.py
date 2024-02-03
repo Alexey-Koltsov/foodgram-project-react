@@ -116,8 +116,14 @@ class RecipeTagSerializer(serializers.ModelSerializer):
 class RecipeListSerializer(serializers.ModelSerializer):
     """Получение списка рецептов."""
 
+    id = serializers.IntegerField(read_only=True)
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username'
+    )
+    tags = serializers.SerializerMethodField()
     ingredients = serializers.SerializerMethodField()
-    is_favorite = serializers.BooleanField()
+    is_favorited = serializers.BooleanField()
     is_in_shopping_cart = serializers.BooleanField()
     author = serializers.SlugRelatedField(slug_field='username',
                                           read_only=True)
@@ -127,10 +133,16 @@ class RecipeListSerializer(serializers.ModelSerializer):
             RecipeIngredient.objects.filter(recipe=obj).all(), many=True
         ).data
 
+    def get_tags(self, obj):
+        return RecipeTagSerializer(
+            RecipeTag.objects.filter(recipe=obj).all(), many=True
+        ).data
+
     class Meta:
         model = Recipe
-        fields = ('name', 'ingredients', 'is_favorite', 'is_in_shopping_cart',
-                  'text', 'author')
+        fields = ('id', 'name', 'author', 'tags', 'text', 'ingredients',
+                  'image', 'is_favorited', 'is_in_shopping_cart',
+                  'cooking_time')
 
 
 class IngredientCreateInRecipeSerializer(serializers.ModelSerializer):

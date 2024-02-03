@@ -106,12 +106,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeCreateUpdateSerializer
         return RecipeListSerializer
 
-    """def get_queryset(self):
+    def get_queryset(self):
         qs = Recipe.objects.add_user_annotations(self.request.user.pk)
-
-        # Фильтры из GET-параметров запроса, например.
         author = self.request.query_params.get('author', None)
-        if author:
+        is_favorited = self.request.query_params.get('is_favorited', None)
+        is_in_shopping_cart = self.request.query_params.get(
+            'is_in_shopping_cart', None
+        )
+        tags = self.request.query_params.get('tags', None)
+        if author is not None:
             qs = qs.filter(author=author)
-
-        return qs"""
+        if is_favorited is not None:
+            qs = qs.filter(is_favorited=is_favorited)
+        if is_in_shopping_cart is not None:
+            qs = qs.filter(is_in_shopping_cart=is_in_shopping_cart)
+        if tags is not None:
+            tags_slug = dict(self.request.query_params)['tags']
+            id = set(qs.filter(tags__slug__in=tags_slug).values_list(
+                'id', flat=True)
+            )
+            qs = qs.filter(id__in=id)
+            print((list(id)))
+        return qs

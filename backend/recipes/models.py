@@ -1,7 +1,10 @@
+from typing import Optional
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
+from django.db.models import Exists, OuterRef
 
 from api.constants import SYMBOLS_QUANTITY
 
@@ -58,6 +61,23 @@ class Ingredient(models.Model):
         return f'{self.name} ({self.measurement_unit})'
 
 
+class RecipeQuerySet(models.QuerySet):
+
+    def add_user_annotations(self, user_id: Optional[int]):
+        return self.annotate(
+            is_favorited=Exists(
+                Favorite.objects.filter(
+                    user_id=user_id, recipe__pk=OuterRef('pk')
+                )
+            ),
+            is_in_shopping_cart=Exists(
+                ShoppingCart.objects.filter(
+                    user_id=user_id, recipe__pk=OuterRef('pk')
+                )
+            ),
+        )
+
+
 class Recipe(models.Model):
     """Модель рецептов"""
 
@@ -96,6 +116,8 @@ class Recipe(models.Model):
         verbose_name='Дата публикации',
         auto_now_add=True,
     )
+
+    objects = RecipeQuerySet.as_manager()
 
     class Meta:
         ordering = ('-pub_date', )
