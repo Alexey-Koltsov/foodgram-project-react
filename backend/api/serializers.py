@@ -3,6 +3,7 @@ import webcolors
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
+from djoser.serializers import SetPasswordSerializer, UserCreateSerializer, UserSerializer
 from rest_framework import serializers
 
 from recipes.models import (Tag, Ingredient, Recipe, RecipeIngredient,
@@ -12,7 +13,7 @@ from users.models import Subscription
 User = get_user_model()
 
 
-class CustomUserSerializer(serializers.ModelSerializer):
+class CustomUserSerializer(UserCreateSerializer):
     """
     Сериализатор для модели User (пользователь).
     """
@@ -28,6 +29,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'is_subscribed',
+            'password',
         )
 
     def get_is_subscribed(self, obj):
@@ -301,6 +303,14 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             'cooking_time', 'is_subscribed', 'is_in_shopping_cart',)
 
 
+class RecipeMinifieldSerializer(serializers.ModelSerializer):
+    """Получение мини списка рецептов."""
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
 class FavoriteSerializer(serializers.ModelSerializer):
     """Сериализатор для работы с моделью Favorite."""
 
@@ -308,10 +318,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='username'
     )
-    recipe = serializers.SlugRelatedField(
-        slug_field='name',
-        queryset=Recipe.objects.all()
-    )
+    recipe = RecipeMinifieldSerializer(read_only=True)
 
     class Meta:
         model = Favorite
@@ -334,3 +341,6 @@ class FavoriteSerializer(serializers.ModelSerializer):
                 f' на рецерт {value.name}!'
             )
         return value
+
+    def to_representation(self, instance):
+        return RecipeMinifieldSerializer(instance.recipe).data

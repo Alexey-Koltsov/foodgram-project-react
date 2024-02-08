@@ -65,7 +65,8 @@ class RecipeQuerySet(models.QuerySet):
 
     def add_user_annotations(self, user_id: Optional[int]):
         return self.annotate(
-            is_favorited=Exists(
+            is_favorited
+            =Exists(
                 Favorite.objects.filter(
                     user_id=user_id, recipe__pk=OuterRef('pk')
                 )

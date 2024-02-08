@@ -1,13 +1,16 @@
 from django.contrib.auth import get_user_model
-from rest_framework import status, viewsets
+from django.shortcuts import get_object_or_404
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
 
 from api.pagination import CustomPagination
 from api.permissions import IsAuthorOrReadOnly
-from api.serializers import (CustomUserSerializer, IngredientSerializer,
+from api.serializers import (CustomUserSerializer, FavoriteSerializer,
+                             IngredientSerializer,
                              RecipeCreateUpdateSerializer,
                              RecipeListSerializer, TagSerializer)
 from recipes.models import (Tag, Ingredient, Recipe, RecipeIngredient,
@@ -72,8 +75,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     получаем рецепт, изменяем рецепт, удаляем рецепт.
     """
 
-    queryset = Recipe.objects.all()
     http_method_names = ('get', 'post', 'patch', 'delete')
+    queryset = Recipe.objects.all()
     permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
     pagination_class = CustomPagination
 
@@ -122,9 +125,29 @@ class RecipeViewSet(viewsets.ModelViewSet):
             qs = qs.filter(is_in_shopping_cart=is_in_shopping_cart)
         if tags is not None:
             tags_slug = dict(self.request.query_params)['tags']
-            id = set(qs.filter(tags__slug__in=tags_slug).values_list(
-                'id', flat=True)
-            )
-            qs = qs.filter(id__in=id)
-            print((list(id)))
+            qs = qs.filter(tags__slug__in=tags_slug).distinct()
         return qs
+
+
+class APIFavoriteCreateDestroy(generics.CreateAPIView, generics.DestroyAPIView):
+    """
+    Добавляем рецепт в избранное и
+    удаляем рецепт из избранного.
+    """
+
+    http_method_names = ('post', 'delete')
+    queryset = Favorite.objects.all()
+    serializer_class = FavoriteSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user,
+                        recipe=get_object_or_404(Recipe, id=self.kwargs['id']))
+
+    def destroy(self, request, *args, **kwargs):
+        instance = get_object_or_404(
+            Favorite,
+            user=self.request.user,
+            recipe=get_object_or_404(Recipe, id=self.kwargs['id'])
+        )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
