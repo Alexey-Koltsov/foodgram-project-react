@@ -86,5 +86,5 @@ class Subscription(models.Model):
         ]
 
     def __str__(self):
-        return (f'{self.user.username[:SYMBOLS_QUANTITY]} подписан на'
+        return (f'{self.user.username[:SYMBOLS_QUANTITY]} подписан(а) на '
                 f'{self.author.username[:SYMBOLS_QUANTITY]}')

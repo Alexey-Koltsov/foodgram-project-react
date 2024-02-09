@@ -31,10 +31,11 @@ class CustomUserSerializer(UserCreateSerializer):
             'is_subscribed',
             'password',
         )
+        extra_kwargs = {'password': {'write_only': True}}
 
     def get_is_subscribed(self, obj):
         user = get_object_or_404(User, username=obj)
-        return Subscription.objects.filter(user=user).exists()
+        return Subscription.objects.filter(author=user).exists()
 
 
 class Hex2NameColor(serializers.Field):
@@ -333,14 +334,66 @@ class FavoriteSerializer(serializers.ModelSerializer):
             'recipe__name', flat=True))
         if value.author.username == request.user.username:
             raise serializers.ValidationError(
-                'Подписываться на свои рецепты нельзя!'
+                'Добавлять в избранное свои рецепты нельзя!'
             )
         if value.name in recipe_list:
             raise serializers.ValidationError(
-                f'{request.user.username} уже подписан(а)'
-                f' на рецерт {value.name}!'
+                f'Рецерт {value.name} уже в избранном'
+                f' пользователя {request.user.username}!'
             )
         return value
 
     def to_representation(self, instance):
         return RecipeMinifieldSerializer(instance.recipe).data
+
+
+class SubscriptionToRepresentationSerializer(CustomUserSerializer):
+    """Сериализатор для отображения списка подписок и отдельной подписки."""
+
+    recipes = serializers.SerializerMethodField()
+    recipes_amount = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = CustomUserSerializer.Meta.fields + ('recipes', 'recipes_amount',)
+
+    def get_recipes(self, obj):
+        recipes = RecipeMinifieldSerializer(
+            Recipe.objects.filter(author=obj),
+            many=True
+        ).data
+        return recipes
+
+    def get_recipes_amount(self, obj):
+        recipes_amount = Recipe.objects.filter(author=obj).count()
+        return recipes_amount
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с моделью Subscription."""
+
+    class Meta:
+        model = Subscription
+        fields = ('user', 'author')
+        read_only_fields = ('user', 'author')
+
+    def get_queryset(self):
+        return self.context['request'].user.subscription_set.all()
+
+    def validate_author(self, value):
+        request = self.context['request']
+        author_list = list(self.get_queryset().values_list(
+            'author__name', flat=True))
+        if value.username == request.user.username:
+            raise serializers.ValidationError(
+                'Подписываться на самого себя нельзя!'
+            )
+        if value.username in author_list:
+            raise serializers.ValidationError(
+                f'{request.user.username} уже подписан(а)'
+                f' на {value.username}!'
+            )
+        return value
+
+    def to_representation(self, instance):
+        return SubscriptionToRepresentationSerializer(instance.author).data

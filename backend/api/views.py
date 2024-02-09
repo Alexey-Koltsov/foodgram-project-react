@@ -12,9 +12,11 @@ from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (CustomUserSerializer, FavoriteSerializer,
                              IngredientSerializer,
                              RecipeCreateUpdateSerializer,
-                             RecipeListSerializer, TagSerializer)
+                             RecipeListSerializer, SubscriptionSerializer,
+                             TagSerializer)
 from recipes.models import (Tag, Ingredient, Recipe, RecipeIngredient,
                             RecipeTag, Favorite, ShoppingCart)
+from users.models import Subscription
 
 
 User = get_user_model()
@@ -148,6 +150,30 @@ class APIFavoriteCreateDestroy(generics.CreateAPIView, generics.DestroyAPIView):
             Favorite,
             user=self.request.user,
             recipe=get_object_or_404(Recipe, id=self.kwargs['id'])
+        )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class APISubsriptionCreateDestroy(generics.CreateAPIView, generics.DestroyAPIView):
+    """
+    Добавляем автора в подписки и
+    удаляем автора из подписок.
+    """
+
+    http_method_names = ('post', 'delete')
+    queryset = Subscription.objects.all()
+    serializer_class = SubscriptionSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user,
+                        author=get_object_or_404(User, id=self.kwargs['id']))
+
+    def destroy(self, request, *args, **kwargs):
+        instance = get_object_or_404(
+            Subscription,
+            user=self.request.user,
+            author=get_object_or_404(User, id=self.kwargs['id'])
         )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
