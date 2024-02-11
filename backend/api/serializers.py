@@ -355,13 +355,20 @@ class SubscriptionToRepresentationSerializer(CustomUserSerializer):
 
     class Meta:
         model = User
-        fields = CustomUserSerializer.Meta.fields + ('recipes', 'recipes_amount',)
+        fields = CustomUserSerializer.Meta.fields + ('recipes',
+                                                     'recipes_amount',)
+        read_only_fields = ('__all__',)
 
     def get_recipes(self, obj):
         recipes = RecipeMinifieldSerializer(
             Recipe.objects.filter(author=obj),
             many=True
         ).data
+        if self.context:
+            recipes_limit = int(self.context['request'].query_params.get(
+                'recipes_limit', None))
+            if recipes_limit is not None and len(recipes) >= recipes_limit:
+                recipes = recipes[0:recipes_limit]
         return recipes
 
     def get_recipes_amount(self, obj):
@@ -378,12 +385,12 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         read_only_fields = ('user', 'author')
 
     def get_queryset(self):
-        return self.context['request'].user.subscription_set.all()
+        return self.context['request'].user.subscription_user.all()
 
     def validate_author(self, value):
         request = self.context['request']
         author_list = list(self.get_queryset().values_list(
-            'author__name', flat=True))
+            'author__username', flat=True))
         if value.username == request.user.username:
             raise serializers.ValidationError(
                 'Подписываться на самого себя нельзя!'
@@ -396,4 +403,49 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return value
 
     def to_representation(self, instance):
-        return SubscriptionToRepresentationSerializer(instance.author).data
+        representation = SubscriptionToRepresentationSerializer(
+            instance.author
+        ).data
+        recipes_limit = self.context['request'].query_params.get(
+            'recipes_limit', None)
+        if recipes_limit is not None:
+            int(recipes_limit)
+            representation['recipes'] = representation[
+                'recipes'
+            ][0:recipes_limit]
+        return representation
+
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с моделью Favorite."""
+
+    user = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username'
+    )
+    recipe = RecipeMinifieldSerializer(read_only=True)
+
+    class Meta:
+        model = ShoppingCart
+        fields = ('user', 'recipe')
+
+    def get_queryset(self):
+        return self.context['request'].user.shoppingcart_set.all()
+
+    def validate_recipe(self, value):
+        request = self.context['request']
+        shoppingcart_list = list(self.get_queryset().values_list(
+            'recipe__name', flat=True))
+        if value.author.username == request.user.username:
+            raise serializers.ValidationError(
+                'Добавлять в избранное свои рецепты нельзя!'
+            )
+        if value.name in shoppingcart_list:
+            raise serializers.ValidationError(
+                f'Рецерт {value.name} уже в списке'
+                f' покупок {request.user.username}!'
+            )
+        return value
+
+    def to_representation(self, instance):
+        return RecipeMinifieldSerializer(instance.recipe).data

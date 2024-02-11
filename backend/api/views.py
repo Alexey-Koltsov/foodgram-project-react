@@ -12,7 +12,9 @@ from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (CustomUserSerializer, FavoriteSerializer,
                              IngredientSerializer,
                              RecipeCreateUpdateSerializer,
-                             RecipeListSerializer, SubscriptionSerializer,
+                             RecipeListSerializer, ShoppingCartSerializer,
+                             SubscriptionSerializer,
+                             SubscriptionToRepresentationSerializer,
                              TagSerializer)
 from recipes.models import (Tag, Ingredient, Recipe, RecipeIngredient,
                             RecipeTag, Favorite, ShoppingCart)
@@ -32,7 +34,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = [AllowAny,]
-    pagination_class = LimitOffsetPagination
+    pagination_class = CustomPagination
 
     @action(
         methods=['get',],
@@ -44,6 +46,24 @@ class CustomUserViewSet(viewsets.ModelViewSet):
     def user_profile(self, request):
         user = request.user
         serializer = self.get_serializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        methods=['get',],
+        serializer_class=SubscriptionToRepresentationSerializer,
+        permission_classes=[IsAuthenticated],
+        detail=False,
+        url_path='subscriptions',
+    )
+    def subscriptions_list(self, request):
+        subscriptions = Subscription.objects.filter(user=self.request.user)
+        author_list = list(subscriptions.values_list('author__id', flat=True))
+        queryset = User.objects.filter(id__in=author_list)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -112,7 +132,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return RecipeListSerializer
 
     def get_queryset(self):
-        qs = Recipe.objects.add_user_annotations(self.request.user.pk)
+        queryset = Recipe.objects.add_user_annotations(self.request.user.pk)
         author = self.request.query_params.get('author', None)
         is_favorited = self.request.query_params.get('is_favorited', None)
         is_in_shopping_cart = self.request.query_params.get(
@@ -120,24 +140,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
         tags = self.request.query_params.get('tags', None)
         if author is not None:
-            qs = qs.filter(author=author)
+            queryset = queryset.filter(author=author)
         if is_favorited is not None:
-            qs = qs.filter(is_favorited=is_favorited)
+            queryset = queryset.filter(is_favorited=is_favorited)
         if is_in_shopping_cart is not None:
-            qs = qs.filter(is_in_shopping_cart=is_in_shopping_cart)
+            queryset = queryset.filter(is_in_shopping_cart=is_in_shopping_cart)
         if tags is not None:
             tags_slug = dict(self.request.query_params)['tags']
-            qs = qs.filter(tags__slug__in=tags_slug).distinct()
-        return qs
+            queryset = queryset.filter(tags__slug__in=tags_slug).distinct()
+        return queryset
 
 
-class APIFavoriteCreateDestroy(generics.CreateAPIView, generics.DestroyAPIView):
+class APIFavoriteCreateDestroy(generics.CreateAPIView,
+                               generics.DestroyAPIView):
     """
-    Добавляем рецепт в избранное и
-    удаляем рецепт из избранного.
+    Добавляем рецепт в избранное и удаляем рецепт из избранного.
     """
 
-    http_method_names = ('post', 'delete')
     queryset = Favorite.objects.all()
     serializer_class = FavoriteSerializer
 
@@ -155,15 +174,15 @@ class APIFavoriteCreateDestroy(generics.CreateAPIView, generics.DestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class APISubsriptionCreateDestroy(generics.CreateAPIView, generics.DestroyAPIView):
+class APISubsriptionCreateDestroy(generics.CreateAPIView,
+                                  generics.DestroyAPIView):
     """
-    Добавляем автора в подписки и
-    удаляем автора из подписок.
+    Добавляем автора в подписки и удаляем автора из подписок.
     """
 
-    http_method_names = ('post', 'delete')
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
+    pagination_class = LimitOffsetPagination
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user,
@@ -174,6 +193,29 @@ class APISubsriptionCreateDestroy(generics.CreateAPIView, generics.DestroyAPIVie
             Subscription,
             user=self.request.user,
             author=get_object_or_404(User, id=self.kwargs['id'])
+        )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class APIShoppingCartCreateDestroy(generics.CreateAPIView,
+                                   generics.DestroyAPIView):
+    """
+    Добавляем рецепт в список покупок и удаляем рецепт из списка покупок.
+    """
+
+    queryset = ShoppingCart.objects.all()
+    serializer_class = ShoppingCartSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user,
+                        recipe=get_object_or_404(Recipe, id=self.kwargs['id']))
+
+    def destroy(self, request, *args, **kwargs):
+        instance = get_object_or_404(
+            ShoppingCart,
+            user=self.request.user,
+            recipe=get_object_or_404(Recipe, id=self.kwargs['id'])
         )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
