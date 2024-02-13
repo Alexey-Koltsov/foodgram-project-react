@@ -1,4 +1,7 @@
+import csv
+from django.db.models import Sum
 from django.contrib.auth import get_user_model
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
@@ -101,6 +104,37 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
     pagination_class = CustomPagination
+
+    @action(
+        methods=['get',],
+        serializer_class=SubscriptionToRepresentationSerializer,
+        permission_classes=[IsAuthenticated],
+        detail=False,
+        url_path='download_shopping_cart',
+    )
+    def download_shopping_cart(self, request):
+        recipes = ShoppingCart.objects.filter(user=self.request.user)
+        recipes_list = recipes.values('recipe')
+        queryset = RecipeIngredient.objects.filter(recipe__in=recipes_list)
+        ingredient_amount = list(queryset.values(
+            'ingredient__name',
+            'ingredient__measurement_unit'
+        ).annotate(sum_amount=Sum('amount')))
+        print(ingredient_amount)
+        with open('shopping_cart.csv', 'w') as file:
+            writer = csv.writer(file)
+            fields = ingredient_amount
+            print('fields: ', fields)
+            for obj in ingredient_amount:
+                row = ''
+                for value in obj.values():
+                    row += str(value) + ','
+                row = row[:-1]
+                print(row)
+                writer.writerow(row)
+        response = FileResponse(open('shopping_cart', 'r'), as_attachment=True)
+
+        return response
 
     def create(self, request, *args, **kwargs):
         request.data['tags'] = [

@@ -63,10 +63,9 @@ class Ingredient(models.Model):
 
 class RecipeQuerySet(models.QuerySet):
 
-    def add_user_annotations(self, user_id: Optional[int]):
+    def add_user_annotations(self, user_id):
         return self.annotate(
-            is_favorited
-            =Exists(
+            is_favorited=Exists(
                 Favorite.objects.filter(
                     user_id=user_id, recipe__pk=OuterRef('pk')
                 )
@@ -158,7 +157,7 @@ class RecipeIngredient(models.Model):
 
     def __str__(self):
         return (f'{self.ingredient.name[:SYMBOLS_QUANTITY]} входит в'
-                f'состав {self.recipe.name[:SYMBOLS_QUANTITY]}')
+                f' состав {self.recipe.name[:SYMBOLS_QUANTITY]}')
 
 
 class RecipeTag(models.Model):
