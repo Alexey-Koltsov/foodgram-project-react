@@ -1,4 +1,6 @@
-import csv
+# import csv
+import io
+import aspose.words as aw
 from django.db.models import Sum
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
@@ -108,33 +110,33 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(
         methods=['get',],
         serializer_class=SubscriptionToRepresentationSerializer,
-        permission_classes=[IsAuthenticated],
+        permission_classes=[AllowAny],  # IsAuthenticated
         detail=False,
         url_path='download_shopping_cart',
     )
     def download_shopping_cart(self, request):
-        recipes = ShoppingCart.objects.filter(user=self.request.user)
+        user = get_object_or_404(User, id=7)
+        recipes = ShoppingCart.objects.filter(user=user)  # self.request.user
         recipes_list = recipes.values('recipe')
         queryset = RecipeIngredient.objects.filter(recipe__in=recipes_list)
         ingredient_amount = list(queryset.values(
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(sum_amount=Sum('amount')))
-        print(ingredient_amount)
-        with open('shopping_cart.csv', 'w') as file:
-            writer = csv.writer(file)
-            fields = ingredient_amount
-            print('fields: ', fields)
-            for obj in ingredient_amount:
-                row = ''
-                for value in obj.values():
-                    row += str(value) + ','
-                row = row[:-1]
-                print(row)
-                writer.writerow(row)
-        response = FileResponse(open('shopping_cart', 'r'), as_attachment=True)
+        # create document object
+        doc = aw.Document()
 
-        return response
+        # create a document builder object
+        builder = aw.DocumentBuilder(doc)
+        builder.list_format.apply_number_default()
+        for obj in ingredient_amount:
+            row = ''
+            for value in obj.values():
+                row += str(value) + ','
+            row = row[:-1]
+            builder.writeln(row)
+        doc.save('shopping_cart.docx')
+        return FileResponse(open('shopping_cart.docx', 'rb'), as_attachment=True)
 
     def create(self, request, *args, **kwargs):
         request.data['tags'] = [
