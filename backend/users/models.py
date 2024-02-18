@@ -24,12 +24,12 @@ class User(AbstractUser):
             r'^[\w.@+-]+$', 'Недопустимый символ.'
         )],
     )
-    firstname = models.CharField(
+    first_name = models.CharField(
         max_length=settings.MAX_LEN_USERNAME,
         unique=True,
         verbose_name='Имя',
     )
-    lastname = models.CharField(
+    last_name = models.CharField(
         max_length=settings.MAX_LEN_USERNAME,
         unique=True,
         verbose_name='Фамилия',

@@ -10,17 +10,18 @@ from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
 
 from api.pagination import CustomPagination
 from api.permissions import IsAuthorOrReadOnly
-from api.serializers import (CustomUserSerializer, FavoriteSerializer,
-                             IngredientSerializer,
+from api.serializers import (CustomUserSerializer, CustomUserCreateSerializer,
+                             FavoriteSerializer, IngredientSerializer,
                              RecipeCreateUpdateSerializer,
                              RecipeListSerializer, ShoppingCartSerializer,
                              SubscriptionSerializer,
                              SubscriptionToRepresentationSerializer,
                              TagSerializer)
+from djoser.serializers import SetPasswordSerializer
+from djoser.views import UserViewSet
 from recipes.models import (Tag, Ingredient, Recipe, RecipeIngredient,
                             RecipeTag, Favorite, ShoppingCart)
 from users.models import Subscription
@@ -37,9 +38,23 @@ class CustomUserViewSet(viewsets.ModelViewSet):
 
     http_method_names = ('get', 'post')
     queryset = User.objects.all()
-    serializer_class = CustomUserSerializer
     permission_classes = [AllowAny,]
     pagination_class = CustomPagination
+
+    def get_serializer_class(self):
+        if ('me') in self.request.path:
+            return CustomUserSerializer
+
+        if ('set_password') in self.request.path:
+            return SetPasswordSerializer
+
+        if ('subscriptions') in self.request.path:
+            return SubscriptionToRepresentationSerializer
+
+        if self.action in ('create'):
+            return CustomUserCreateSerializer
+
+        return CustomUserSerializer
 
     @action(
         methods=['get',],
@@ -49,9 +64,24 @@ class CustomUserViewSet(viewsets.ModelViewSet):
         url_path='me',
     )
     def user_profile(self, request):
-        user = request.user
+        user = self.request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        methods=['post',],
+        serializer_class=SetPasswordSerializer,
+        permission_classes=[IsAuthenticated],
+        detail=False,
+        url_path='set_password',
+    )
+    def change_password(self, request):
+        user = self.request.user
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         methods=['get',],
@@ -81,7 +111,7 @@ class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny,]
-    pagination_class = LimitOffsetPagination
+    pagination_class = CustomPagination
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
@@ -110,23 +140,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(
         methods=['get',],
         serializer_class=SubscriptionToRepresentationSerializer,
-        permission_classes=[AllowAny],  # IsAuthenticated
+        permission_classes=[IsAuthenticated],
         detail=False,
         url_path='download_shopping_cart',
     )
     def download_shopping_cart(self, request):
-        user = get_object_or_404(User, id=7)
-        recipes = ShoppingCart.objects.filter(user=user)  # self.request.user
+        recipes = ShoppingCart.objects.filter(user=self.request.user)
         recipes_list = recipes.values('recipe')
         queryset = RecipeIngredient.objects.filter(recipe__in=recipes_list)
         ingredient_amount = list(queryset.values(
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(sum_amount=Sum('amount')))
-        # create document object
         doc = aw.Document()
-
-        # create a document builder object
         builder = aw.DocumentBuilder(doc)
         builder.list_format.apply_number_default()
         for obj in ingredient_amount:
@@ -135,6 +161,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 row += str(value) + ','
             row = row[:-1]
             builder.writeln(row)
+        builder.list_format.remove_numbers()
         doc.save('shopping_cart.docx')
         return FileResponse(open('shopping_cart.docx', 'rb'), as_attachment=True)
 

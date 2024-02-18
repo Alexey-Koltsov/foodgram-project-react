@@ -13,11 +13,32 @@ from users.models import Subscription
 User = get_user_model()
 
 
-class CustomUserSerializer(UserCreateSerializer):
+class CustomUserCreateSerializer(UserCreateSerializer):
+    """
+    Сериализатор для создания пользователя.
+    """
+
+    id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'password',
+        )
+        extra_kwargs = {'password': {'write_only': True}}
+
+
+class CustomUserSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели User (пользователь).
     """
 
+    id = serializers.IntegerField(read_only=True)
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
@@ -74,6 +95,7 @@ class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
         fields = (
+            'id',
             'name',
             'measurement_unit',
         )
