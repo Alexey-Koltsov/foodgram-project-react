@@ -127,11 +127,11 @@ class IngredientViewSet(viewsets.ModelViewSet):
         queryset = Ingredient.objects.all()
         search = self.request.query_params.get('name', None)
         if search is not None:
-            queryset = queryset.annotate(
+            queryset = Ingredient.objects.annotate(
                 lower_name=Lower("name")
             ).filter(lower_name__startswith=search.lower())
             return queryset
-        return queryset
+        return Ingredient.objects.all()
 
 
 class RecipeViewSet(viewsets.ModelViewSet):

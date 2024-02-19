@@ -19,6 +19,11 @@ class CustomUserCreateSerializer(UserCreateSerializer):
     """
 
     id = serializers.IntegerField(read_only=True)
+    email = serializers.EmailField(required=True)
+    username = serializers.CharField(required=True)
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    password = serializers.CharField(required=True, write_only=True)
 
     class Meta:
         model = User
@@ -30,7 +35,7 @@ class CustomUserCreateSerializer(UserCreateSerializer):
             'last_name',
             'password',
         )
-        extra_kwargs = {'password': {'write_only': True}}
+        #extra_kwargs = {'password': {'write_only': True}}
 
 
 class CustomUserSerializer(serializers.ModelSerializer):

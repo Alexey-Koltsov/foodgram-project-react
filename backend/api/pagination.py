@@ -20,7 +20,5 @@ class CustomPagination(PageNumberPagination):
             return None
         url = self.request.build_absolute_uri()
         page_number = self.page.previous_page_number()
-        if page_number == 1:
-            return remove_query_param(url, self.page_query_param)
         url = remove_query_param(url, self.page_size_query_param)
         return replace_query_param(url, self.page_query_param, page_number)
