@@ -1,7 +1,6 @@
-# import csv
-import io
 import aspose.words as aw
 from django.db.models import Sum
+from django.db.models.functions import Lower
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
@@ -21,7 +20,6 @@ from api.serializers import (CustomUserSerializer, CustomUserCreateSerializer,
                              SubscriptionToRepresentationSerializer,
                              TagSerializer)
 from djoser.serializers import SetPasswordSerializer
-from djoser.views import UserViewSet
 from recipes.models import (Tag, Ingredient, Recipe, RecipeIngredient,
                             RecipeTag, Favorite, ShoppingCart)
 from users.models import Subscription
@@ -124,6 +122,16 @@ class IngredientViewSet(viewsets.ModelViewSet):
     serializer_class = IngredientSerializer
     permission_classes = [AllowAny,]
     pagination_class = CustomPagination
+
+    def get_queryset(self):
+        queryset = Ingredient.objects.all()
+        search = self.request.query_params.get('name', None)
+        if search is not None:
+            queryset = queryset.annotate(
+                lower_name=Lower("name")
+            ).filter(lower_name__startswith=search.lower())
+            return queryset
+        return queryset
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
