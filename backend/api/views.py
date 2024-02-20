@@ -30,8 +30,9 @@ User = get_user_model()
 
 class CustomUserViewSet(viewsets.ModelViewSet):
     """
-    Получаем список всех пользователей, создаем нового пользователя.
-    Получаем пользователя по id.
+    Cоздаем нового пользователя, получаем список всех пользователей,
+    получаем страницу пользователя по id,
+    получаем страницу текущего пользователя.
     """
 
     http_method_names = ('get', 'post')
@@ -171,7 +172,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             builder.writeln(row)
         builder.list_format.remove_numbers()
         doc.save('shopping_cart.docx')
-        return FileResponse(open('shopping_cart.docx', 'rb'), as_attachment=True)
+        return FileResponse(open('shopping_cart.docx', 'rb'),
+                            as_attachment=True)
 
     def create(self, request, *args, **kwargs):
         request.data['tags'] = [
@@ -181,7 +183,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(serializer.data, status=status.HTTP_201_CREATED,
+                        headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)

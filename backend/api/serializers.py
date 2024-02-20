@@ -35,7 +35,6 @@ class CustomUserCreateSerializer(UserCreateSerializer):
             'last_name',
             'password',
         )
-        #extra_kwargs = {'password': {'write_only': True}}
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -55,33 +54,17 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'is_subscribed',
-            'password',
         )
-        extra_kwargs = {'password': {'write_only': True}}
 
     def get_is_subscribed(self, obj):
         user = get_object_or_404(User, username=obj)
         return Subscription.objects.filter(author=user).exists()
 
 
-class Hex2NameColor(serializers.Field):
-    def to_representation(self, value):
-        return value
-
-    def to_internal_value(self, data):
-        try:
-            data = webcolors.hex_to_name(data)
-        except ValueError:
-            raise serializers.ValidationError('Для этого цвета нет имени')
-        return data
-
-
 class TagSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели Tag (тэг).
     """
-
-    color = Hex2NameColor()
 
     class Meta:
         model = Tag
@@ -148,16 +131,11 @@ class RecipeListSerializer(serializers.ModelSerializer):
     """Получение списка рецептов."""
 
     id = serializers.IntegerField(read_only=True)
-    author = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='username'
-    )
+    author = CustomUserSerializer(read_only=True)
     tags = serializers.SerializerMethodField()
     ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.BooleanField()
     is_in_shopping_cart = serializers.BooleanField()
-    author = serializers.SlugRelatedField(slug_field='username',
-                                          read_only=True)
 
     def get_ingredients(self, obj):
         return RecipeIngredientSerializer(
@@ -323,6 +301,8 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         representation['is_in_shopping_cart'] = ShoppingCart.objects.filter(
             user=user, recipe=recipe,
         ).exists()
+        self.fields.pop('author')
+        representation['author'] = CustomUserSerializer(author).data
         return representation
 
     class Meta:
