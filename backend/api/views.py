@@ -286,6 +286,7 @@ class APIFavoriteCreateDestroy(generics.CreateAPIView,
                         recipe=get_object_or_404(Recipe, id=self.kwargs['id']))
 
     def destroy(self, request, *args, **kwargs):
+        recipe = get_object_or_404(Recipe, id=self.kwargs['id'])
         recipes_in_favorite_list = list(self.get_queryset().filter(
             user=request.user
         ).values_list('recipe__id', flat=True))
@@ -297,7 +298,7 @@ class APIFavoriteCreateDestroy(generics.CreateAPIView,
         instance = get_object_or_404(
             Favorite,
             user=self.request.user,
-            recipe=get_object_or_404(Recipe, id=self.kwargs['id'])
+            recipe=recipe
         )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -337,9 +338,10 @@ class APISubscriptionCreateDestroy(generics.CreateAPIView,
                         author=get_object_or_404(User, id=self.kwargs['id']))
 
     def destroy(self, request, *args, **kwargs):
+        author = get_object_or_404(User, id=self.kwargs['id'])
         subscriptions_id_list = list(self.get_queryset().filter(
             user=self.request.user
-        ).values_list('id', flat=True))
+        ).values_list('author__id', flat=True))
         if self.kwargs['id'] not in subscriptions_id_list:
             return Response(
                 'Такой подписки не существует!',
@@ -348,7 +350,7 @@ class APISubscriptionCreateDestroy(generics.CreateAPIView,
         instance = get_object_or_404(
             Subscription,
             user=self.request.user,
-            author=get_object_or_404(User, id=self.kwargs['id'])
+            author=author
         )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -391,6 +393,7 @@ class APIShoppingCartCreateDestroy(generics.CreateAPIView,
                         recipe=get_object_or_404(Recipe, id=self.kwargs['id']))
 
     def destroy(self, request, *args, **kwargs):
+        recipe = get_object_or_404(Recipe, id=self.kwargs['id'])
         recipes_in_shoppingcart_list = list(self.get_queryset().filter(
             user=request.user
         ).values_list('recipe__id', flat=True))
@@ -402,7 +405,7 @@ class APIShoppingCartCreateDestroy(generics.CreateAPIView,
         instance = get_object_or_404(
             ShoppingCart,
             user=self.request.user,
-            recipe=get_object_or_404(Recipe, id=self.kwargs['id'])
+            recipe=recipe
         )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -406,21 +406,6 @@ class FavoriteSerializer(serializers.ModelSerializer):
     def get_queryset(self):
         return self.context['request'].user.favorite_set.all()
 
-    """def validate_recipe(self, value):
-        request = self.context['request']
-        recipe_list = list(self.get_queryset().values_list(
-            'recipe__name', flat=True))
-        if value.author.username == request.user.username:
-            raise serializers.ValidationError(
-                'Добавлять в избранное свои рецепты нельзя!'
-            )
-        if value.name in recipe_list:
-            raise serializers.ValidationError(
-                f'Рецерт {value.name} уже в избранном'
-                f' пользователя {request.user.username}!'
-            )
-        return value"""
-
     def to_representation(self, instance):
         return RecipeMinifieldSerializer(instance.recipe).data
 
@@ -465,22 +450,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def get_queryset(self):
         return self.context['request'].user.subscription_user.all()
 
-    """def validate_author(self, value):
-        request = self.context['request']
-        author_list = list(self.get_queryset().values_list(
-            'author__id', flat=True))
-        print(author_list)
-        if value.id == request.user.id:
-            raise serializers.ValidationError(
-                'Подписываться на самого себя нельзя!'
-            )
-        if value.id in author_list:
-            raise serializers.ValidationError(
-                f'{request.user.username} уже подписан(а)'
-                f' на {value.username}!'
-            )
-        return value"""
-
     def to_representation(self, instance):
         representation = SubscriptionToRepresentationSerializer(
             instance.author
@@ -510,21 +479,6 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
     def get_queryset(self):
         return self.context['request'].user.shoppingcart_set.all()
-
-    """def validate_recipe(self, value):
-        request = self.context['request']
-        shoppingcart_list = list(self.get_queryset().values_list(
-            'recipe__name', flat=True))
-        if value.author.username == request.user.username:
-            raise serializers.ValidationError(
-                'Добавлять в избранное свои рецепты нельзя!'
-            )
-        if value.name in shoppingcart_list:
-            raise serializers.ValidationError(
-                f'Рецерт {value.name} уже в списке'
-                f' покупок {request.user.username}!'
-            )
-        return value"""
 
     def to_representation(self, instance):
         return RecipeMinifieldSerializer(instance.recipe).data
