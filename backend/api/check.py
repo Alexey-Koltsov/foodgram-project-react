@@ -1,4 +1,2 @@
-import webcolors
-value = 'black'
-value = webcolors.name_to_hex(value, spec=u'css3')
-print(value)
+a = [1, 2, 3, 4, 5]
+print(a[0:6])

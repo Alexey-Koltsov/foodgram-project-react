@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from api.views import (APIFavoriteCreateDestroy, APISubsriptionCreateDestroy,
+from api.views import (APIFavoriteCreateDestroy, APISubscriptionCreateDestroy,
                        APIShoppingCartCreateDestroy, CustomUserViewSet,
                        IngredientViewSet, RecipeViewSet, TagViewSet)
 
@@ -20,7 +20,7 @@ recipe_favorite_subscribe_urlpatterns = [
     path('recipes/<int:id>/favorite/', APIFavoriteCreateDestroy.as_view()),
     path('recipes/<int:id>/shopping_cart/',
          APIShoppingCartCreateDestroy.as_view()),
-    path('users/<int:id>/subscribe/', APISubsriptionCreateDestroy.as_view()),
+    path('users/<int:id>/subscribe/', APISubscriptionCreateDestroy.as_view()),
 ]
 
 

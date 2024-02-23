@@ -6,8 +6,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from api.pagination import CustomPagination
@@ -15,7 +14,7 @@ from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (CustomUserSerializer, CustomUserCreateSerializer,
                              FavoriteSerializer, IngredientSerializer,
                              RecipeCreateUpdateSerializer,
-                             RecipeListSerializer, ShoppingCartSerializer,
+                             RecipeSerializer, ShoppingCartSerializer,
                              SubscriptionSerializer,
                              SubscriptionToRepresentationSerializer,
                              TagSerializer)
@@ -86,6 +85,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
         methods=['get',],
         serializer_class=SubscriptionToRepresentationSerializer,
         permission_classes=[IsAuthenticated],
+        pagination_class=CustomPagination,
         detail=False,
         url_path='subscriptions',
     )
@@ -110,7 +110,6 @@ class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny,]
-    pagination_class = CustomPagination
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
@@ -122,7 +121,6 @@ class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = [AllowAny,]
-    pagination_class = CustomPagination
 
     def get_queryset(self):
         queryset = Ingredient.objects.all()
@@ -143,7 +141,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     http_method_names = ('get', 'post', 'patch', 'delete')
     queryset = Recipe.objects.all()
-    permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
+    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
     pagination_class = CustomPagination
 
     @action(
@@ -175,7 +173,24 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return FileResponse(open('shopping_cart.docx', 'rb'),
                             as_attachment=True)
 
+    def check_ingreds(self, request):
+        ingredients_id = [
+            ingredient['id'] for ingredient in request.data['ingredients']
+        ]
+        return len(ingredients_id) != len(set(ingredients_id))
+
+    def check_tags(self, request):
+        return len(request.data['tags']) != len(set(request.data['tags']))
+
     def create(self, request, *args, **kwargs):
+        if 'tags' not in request.data or self.check_tags(request):
+            return Response({'detail': 'В запросе отсутствует поле tags'
+                             ' или тэги повторяются'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if 'ingredients' not in request.data or self.check_ingreds(request):
+            return Response({'detail': 'В запросе отсутствует поле'
+                             ' ingredients или повторяются ингредиенты'},
+                            status=status.HTTP_400_BAD_REQUEST)
         request.data['tags'] = [
             {'id': tag_id} for tag_id in request.data['tags']
         ]
@@ -190,12 +205,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def update(self, request, *args, **kwargs):
+        if 'tags' not in request.data or self.check_tags(request):
+            return Response({'detail': 'В запросе отсутствует поле tags'
+                             ' или тэги повторяются'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if 'ingredients' not in request.data or self.check_ingreds(request):
+            return Response({'detail': 'В запросе отсутствует поле'
+                             ' ingredients или повторяются ингредиенты'},
+                            status=status.HTTP_400_BAD_REQUEST)
         partial = kwargs.pop('partial', False)
         request.data['tags'] = [
             {'id': tag_id} for tag_id in request.data['tags']
         ]
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=request.data,
+                                         partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
@@ -203,7 +227,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
             return RecipeCreateUpdateSerializer
-        return RecipeListSerializer
+        return RecipeSerializer
 
     def get_queryset(self):
         queryset = Recipe.objects.add_user_annotations(self.request.user.pk)
@@ -233,12 +257,43 @@ class APIFavoriteCreateDestroy(generics.CreateAPIView,
 
     queryset = Favorite.objects.all()
     serializer_class = FavoriteSerializer
+    permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
+
+    def create(self, request, *args, **kwargs):
+        recipes_list = list(Recipe.objects.values_list('id', flat=True))
+        recipes_in_favorite_list = list(self.get_queryset().filter(
+            user=request.user
+        ).values_list('recipe__id', flat=True))
+        if not self.kwargs['id'] in recipes_list:
+            return Response(
+                'Добавлять в избранное не существующие рецепты нельзя!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if self.kwargs['id'] in recipes_in_favorite_list:
+            return Response(
+                f'Рецерт уже в избранном {request.user.username}!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED,
+                        headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user,
                         recipe=get_object_or_404(Recipe, id=self.kwargs['id']))
 
     def destroy(self, request, *args, **kwargs):
+        recipes_in_favorite_list = list(self.get_queryset().filter(
+            user=request.user
+        ).values_list('recipe__id', flat=True))
+        if self.kwargs['id'] not in recipes_in_favorite_list:
+            return Response(
+                'В избранном нет такого рецепта!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
         instance = get_object_or_404(
             Favorite,
             user=self.request.user,
@@ -248,21 +303,48 @@ class APIFavoriteCreateDestroy(generics.CreateAPIView,
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class APISubsriptionCreateDestroy(generics.CreateAPIView,
-                                  generics.DestroyAPIView):
+class APISubscriptionCreateDestroy(generics.CreateAPIView,
+                                   generics.DestroyAPIView):
     """
     Добавляем автора в подписки и удаляем автора из подписок.
     """
 
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
-    pagination_class = LimitOffsetPagination
+    permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
+
+    def create(self, request, *args, **kwargs):
+        authors_list = list(self.get_queryset().values_list(
+            'author__id', flat=True))
+        if self.kwargs['id'] == request.user.id:
+            return Response('Подписываться на самого себя нельзя!',
+                            status=status.HTTP_400_BAD_REQUEST)
+        if self.kwargs['id'] in authors_list:
+            return Response(
+                f'{self.request.user.username} уже подписан(а)'
+                f' на этого автора!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED,
+                        headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user,
                         author=get_object_or_404(User, id=self.kwargs['id']))
 
     def destroy(self, request, *args, **kwargs):
+        subscriptions_id_list = list(self.get_queryset().filter(
+            user=self.request.user
+        ).values_list('id', flat=True))
+        if self.kwargs['id'] not in subscriptions_id_list:
+            return Response(
+                'Такой подписки не существует!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
         instance = get_object_or_404(
             Subscription,
             user=self.request.user,
@@ -280,12 +362,43 @@ class APIShoppingCartCreateDestroy(generics.CreateAPIView,
 
     queryset = ShoppingCart.objects.all()
     serializer_class = ShoppingCartSerializer
+    permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
+
+    def create(self, request, *args, **kwargs):
+        recipes_list = list(Recipe.objects.values_list('id', flat=True))
+        recipes_in_shoppingcart_list = list(self.get_queryset().filter(
+            user=request.user
+        ).values_list('recipe__id', flat=True))
+        if not self.kwargs['id'] in recipes_list:
+            return Response(
+                'Добавлять в список покупок не существующие рецепты нельзя!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if self.kwargs['id'] in recipes_in_shoppingcart_list:
+            return Response(
+                f'Рецерт уже в списке покупок {request.user.username}!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED,
+                        headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user,
                         recipe=get_object_or_404(Recipe, id=self.kwargs['id']))
 
     def destroy(self, request, *args, **kwargs):
+        recipes_in_shoppingcart_list = list(self.get_queryset().filter(
+            user=request.user
+        ).values_list('recipe__id', flat=True))
+        if self.kwargs['id'] not in recipes_in_shoppingcart_list:
+            return Response(
+                'В корзине нет такого рецепта!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
         instance = get_object_or_404(
             ShoppingCart,
             user=self.request.user,

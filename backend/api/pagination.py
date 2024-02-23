@@ -7,6 +7,8 @@ class CustomPagination(PageNumberPagination):
 
     page_size_query_param = 'limit'
 
+    page_size = 6
+
     def get_next_link(self):
         if not self.page.has_next():
             return None
