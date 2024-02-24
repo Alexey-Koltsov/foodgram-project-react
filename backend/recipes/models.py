@@ -22,11 +22,11 @@ class Tag(models.Model):
     color = models.CharField(
         max_length=settings.MAX_LEN_COLOR,
         verbose_name='Цвет в НЕХ',
-        unique=True,
+        null=True,
     )
     slug = models.SlugField(
         max_length=settings.MAX_LEN_SLUG,
-        unique=True,
+        null=True,
         verbose_name='Уникальный слаг',
         validators=[RegexValidator(
             r'^[-a-zA-Z0-9_]+$', 'Недопустимый символ.'
@@ -108,6 +108,7 @@ class Recipe(models.Model):
         verbose_name='Тэги',
     )
     cooking_time = models.PositiveSmallIntegerField(
+        verbose_name='Время приготовления (в минутах)',
         validators=(
             MinValueValidator(1, message='Минимальное значение: 1'),
         ),
@@ -206,6 +207,8 @@ class Favorite(models.Model):
     )
 
     class Meta:
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранные'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
@@ -235,6 +238,8 @@ class ShoppingCart(models.Model):
     )
 
     class Meta:
+        verbose_name = 'Список покупок'
+        verbose_name_plural = 'Списки покупок'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],

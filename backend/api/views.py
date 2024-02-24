@@ -6,7 +6,8 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import (AllowAny, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
 from api.pagination import CustomPagination
@@ -19,8 +20,8 @@ from api.serializers import (CustomUserSerializer, CustomUserCreateSerializer,
                              SubscriptionToRepresentationSerializer,
                              TagSerializer)
 from djoser.serializers import SetPasswordSerializer
-from recipes.models import (Tag, Ingredient, Recipe, RecipeIngredient,
-                            RecipeTag, Favorite, ShoppingCart)
+from recipes.models import (Ingredient, Favorite, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 from users.models import Subscription
 
 

@@ -1,13 +1,10 @@
 import base64
-import collections
-import webcolors
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.files.base import ContentFile
 from django.core.validators import MaxLengthValidator, RegexValidator
-from django.shortcuts import get_object_or_404
-from djoser.serializers import SetPasswordSerializer, UserCreateSerializer, UserSerializer
+from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
 
 from recipes.models import (Tag, Ingredient, Recipe, RecipeIngredient,
@@ -347,7 +344,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     def to_representation(self, obj):
         """Возвращаем представление в таком же виде, как и GET-запрос."""
 
-        self.fields.pop('ingredients')
+        """self.fields.pop('ingredients')
         self.fields.pop('tags')
         representation = super().to_representation(obj)
         representation['ingredients'] = RecipeIngredientSerializer(
@@ -372,8 +369,12 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
                   'cooking_time')
         data = collections.OrderedDict()
         for field in fields:
-            data[field] = representation[field]
-        return data
+            data[field] = representation[field]"""
+        #return data
+        queryset = Recipe.objects.add_user_annotations(
+            self.context['request'].user.pk)
+        obj = queryset.get(id=obj.id)
+        return RecipeSerializer(obj).data
 
     class Meta:
         model = Recipe
