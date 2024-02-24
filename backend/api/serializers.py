@@ -344,33 +344,6 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     def to_representation(self, obj):
         """Возвращаем представление в таком же виде, как и GET-запрос."""
 
-        """self.fields.pop('ingredients')
-        self.fields.pop('tags')
-        representation = super().to_representation(obj)
-        representation['ingredients'] = RecipeIngredientSerializer(
-            RecipeIngredient.objects.filter(recipe=obj).all(), many=True
-        ).data
-        representation['tags'] = RecipeTagSerializer(
-            RecipeTag.objects.filter(recipe=obj).all(), many=True
-        ).data
-        user = get_object_or_404(User, username=self.context['request'].user)
-        author = get_object_or_404(User, username=representation['author'])
-        recipe = get_object_or_404(Recipe, id=representation['id'])
-        representation['is_favorited'] = Favorite.objects.filter(
-            user=user, recipe=recipe,
-        ).exists()
-        representation['is_in_shopping_cart'] = ShoppingCart.objects.filter(
-            user=user, recipe=recipe,
-        ).exists()
-        self.fields.pop('author')
-        representation['author'] = CustomUserSerializer(author).data
-        fields = ('id', 'tags', 'author', 'ingredients', 'is_favorited',
-                  'is_in_shopping_cart', 'name', 'image', 'text',
-                  'cooking_time')
-        data = collections.OrderedDict()
-        for field in fields:
-            data[field] = representation[field]"""
-        #return data
         queryset = Recipe.objects.add_user_annotations(
             self.context['request'].user.pk)
         obj = queryset.get(id=obj.id)
