@@ -1,10 +1,8 @@
+from api.views import (APIFavoriteCreateDestroy, APIShoppingCartCreateDestroy,
+                       APISubscriptionCreateDestroy, CustomUserViewSet,
+                       IngredientViewSet, RecipeViewSet, TagViewSet)
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-
-from api.views import (APIFavoriteCreateDestroy, APISubscriptionCreateDestroy,
-                       APIShoppingCartCreateDestroy, CustomUserViewSet,
-                       IngredientViewSet, RecipeViewSet, TagViewSet)
-
 
 app_name = 'api'
 
@@ -27,6 +25,5 @@ recipe_favorite_subscribe_urlpatterns = [
 urlpatterns = [
     path('', include(router_api_01.urls)),
     path('', include(recipe_favorite_subscribe_urlpatterns)),
-    #path('', include('djoser.urls')),
     path('auth/', include('djoser.urls.authtoken')),
 ]

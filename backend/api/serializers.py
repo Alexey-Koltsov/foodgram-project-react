@@ -1,14 +1,14 @@
 import base64
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.files.base import ContentFile
 from django.core.validators import MaxLengthValidator, RegexValidator
 from djoser.serializers import UserCreateSerializer
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            RecipeTag, ShoppingCart, Tag)
 from rest_framework import serializers
-
-from recipes.models import (Tag, Ingredient, Recipe, RecipeIngredient,
-                            RecipeTag, Favorite, ShoppingCart)
 from users.models import Subscription
 
 User = get_user_model()
@@ -91,8 +91,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, obj):
         if 'request' in self.context:
             return (
-                self.context['request'].user.is_authenticated and
-                Subscription.objects.filter(
+                self.context['request'].user.is_authenticated
+                and Subscription.objects.filter(
                     user=self.context['request'].user,
                     author=obj
                 ).exists())
@@ -253,7 +253,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         validators=[
             MaxLengthValidator(settings.MAX_LEN_NAME),
         ]
-        )
+    )
     text = serializers.CharField(required=True)
     cooking_time = serializers.IntegerField(required=True)
     is_favorited = serializers.BooleanField(read_only=True)

@@ -1,18 +1,15 @@
 import csv
+
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError
-
 from recipes.models import Ingredient
-
 
 CSV_BASE = {
     Ingredient: 'ingredients.csv',
 }
 
-CSV_FIELD_MAPPING = {
-#    Ingredient: ['name', 'measurement_unit'],
-}
+CSV_FIELD_MAPPING = {}
 
 
 class Command(BaseCommand):
