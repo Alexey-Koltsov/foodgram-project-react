@@ -6,9 +6,10 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.files.base import ContentFile
 from django.core.validators import MaxLengthValidator, RegexValidator
 from djoser.serializers import UserCreateSerializer
+from rest_framework import serializers
+
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             RecipeTag, ShoppingCart, Tag)
-from rest_framework import serializers
 from users.models import Subscription
 
 User = get_user_model()
@@ -178,9 +179,15 @@ class RecipeSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     tags = serializers.SerializerMethodField()
     author = CustomUserSerializer(read_only=True)
+    image_url = serializers.SerializerMethodField(read_only=True)
     ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.BooleanField()
     is_in_shopping_cart = serializers.BooleanField()
+
+    def get_image_url(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
 
     def get_ingredients(self, obj):
         return RecipeIngredientSerializer(
@@ -195,7 +202,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'tags', 'author', 'ingredients', 'is_favorited',
-                  'is_in_shopping_cart', 'name', 'image', 'text',
+                  'is_in_shopping_cart', 'name', 'image', 'image_url', 'text',
                   'cooking_time')
 
 

@@ -1,4 +1,15 @@
-import aspose.words as aw
+from django.contrib.auth import get_user_model
+from django.db.models import Sum
+from django.db.models.functions import Lower
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404, render
+from djoser.serializers import SetPasswordSerializer
+from rest_framework import generics, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import (AllowAny, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
+from rest_framework.response import Response
+
 from api.pagination import CustomPagination
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (CustomUserCreateSerializer, CustomUserSerializer,
@@ -7,22 +18,16 @@ from api.serializers import (CustomUserCreateSerializer, CustomUserSerializer,
                              ShoppingCartSerializer, SubscriptionSerializer,
                              SubscriptionToRepresentationSerializer,
                              TagSerializer)
-from django.contrib.auth import get_user_model
-from django.db.models import Sum
-from django.db.models.functions import Lower
-from django.http import FileResponse
-from django.shortcuts import get_object_or_404
-from djoser.serializers import SetPasswordSerializer
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
-from rest_framework import generics, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import (AllowAny, IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
-from rest_framework.response import Response
 from users.models import Subscription
 
 User = get_user_model()
+
+
+def page_not_found(request, exception):
+    """Страница не найдена."""
+    return render(request, 'static/404.html', status=status.HTTP_404_NOT_FOUND)
 
 
 class CustomUserViewSet(viewsets.ModelViewSet):
@@ -157,18 +162,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(sum_amount=Sum('amount')))
-        doc = aw.Document()
-        builder = aw.DocumentBuilder(doc)
-        builder.list_format.apply_number_default()
+        file = open('shopping_cart.txt', "w+")
+        row = ''
         for obj in ingredient_amount:
-            row = ''
             for value in obj.values():
-                row += str(value) + ','
-            row = row[:-1]
-            builder.writeln(row)
-        builder.list_format.remove_numbers()
-        doc.save('shopping_cart.docx')
-        return FileResponse(open('shopping_cart.docx', 'rb'),
+                row += str(value) + ', '
+            row = row[:-2]
+            row += ';\n'
+        print(row)
+        file.write(row)
+        file.close()
+        return FileResponse(open('shopping_cart.txt', 'rb'),
                             as_attachment=True)
 
     def check_ingreds(self, request):
