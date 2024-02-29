@@ -39,7 +39,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
 
     http_method_names = ('get', 'post')
     queryset = User.objects.all()
-    permission_classes = [AllowAny,]
+    permission_classes = [AllowAny]
     pagination_class = CustomPagination
 
     def get_serializer_class(self):
@@ -58,7 +58,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
         return CustomUserSerializer
 
     @action(
-        methods=['get',],
+        methods=['get'],
         serializer_class=CustomUserSerializer,
         permission_classes=[IsAuthenticated],
         detail=False,
@@ -70,7 +70,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(
-        methods=['post',],
+        methods=['post'],
         serializer_class=SetPasswordSerializer,
         permission_classes=[IsAuthenticated],
         detail=False,
@@ -85,7 +85,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
-        methods=['get',],
+        methods=['get'],
         serializer_class=SubscriptionToRepresentationSerializer,
         permission_classes=[IsAuthenticated],
         pagination_class=CustomPagination,
@@ -112,7 +112,7 @@ class TagViewSet(viewsets.ModelViewSet):
     http_method_names = ('get')
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = [AllowAny,]
+    permission_classes = [AllowAny]
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
@@ -123,7 +123,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     http_method_names = ('get',)
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = [AllowAny,]
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         queryset = Ingredient.objects.all()
@@ -148,7 +148,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
 
     @action(
-        methods=['get',],
+        methods=['get'],
         serializer_class=SubscriptionToRepresentationSerializer,
         permission_classes=[IsAuthenticated],
         detail=False,
