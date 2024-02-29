@@ -26,12 +26,10 @@ class User(AbstractUser):
     )
     first_name = models.CharField(
         max_length=settings.MAX_LEN_USERNAME,
-        unique=True,
         verbose_name='Имя',
     )
     last_name = models.CharField(
         max_length=settings.MAX_LEN_USERNAME,
-        unique=True,
         verbose_name='Фамилия',
     )
     email = models.EmailField(

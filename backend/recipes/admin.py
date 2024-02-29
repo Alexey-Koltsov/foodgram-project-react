@@ -8,8 +8,8 @@ class RecipeAdmin(admin.ModelAdmin):
     """Настройка админзоны для модели рецептов."""
 
     list_display = (
-        'author',
         'name',
+        'author',
     )
     search_fields = ('name',)
     list_filter = ('author__username', 'name', 'tags__name',)

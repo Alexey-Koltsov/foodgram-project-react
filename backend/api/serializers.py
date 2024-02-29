@@ -178,13 +178,13 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     id = serializers.IntegerField(read_only=True)
     tags = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
     author = CustomUserSerializer(read_only=True)
-    image_url = serializers.SerializerMethodField(read_only=True)
     ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.BooleanField()
     is_in_shopping_cart = serializers.BooleanField()
 
-    def get_image_url(self, obj):
+    def get_image(self, obj):
         if obj.image:
             return obj.image.url
         return None
@@ -202,7 +202,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'tags', 'author', 'ingredients', 'is_favorited',
-                  'is_in_shopping_cart', 'name', 'image', 'image_url', 'text',
+                  'is_in_shopping_cart', 'name', 'image', 'text',
                   'cooking_time')
 
 
