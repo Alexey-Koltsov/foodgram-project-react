@@ -378,17 +378,25 @@ class FavoriteSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='username'
     )
-    recipe = RecipeMinifieldSerializer(read_only=True)
 
     class Meta:
         model = Favorite
         fields = ('user', 'recipe')
 
     def get_queryset(self):
-        return self.context['request'].user.favorite_set.all()
+        return self.context['request'].user.favorite.all()
 
     def to_representation(self, instance):
         return RecipeMinifieldSerializer(instance.recipe).data
+
+    def validate_recipe(self, value):
+        if self.context['request'].method == 'POST':
+            if self.get_queryset().filter(user=self.context['request'].user,
+                                          recipe=value).exists():
+                raise serializers.ValidationError(
+                    'Рецерт уже добавлен!'
+                )
+        return value
 
 
 class SubscriptionToRepresentationSerializer(CustomUserSerializer):

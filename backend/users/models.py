@@ -9,13 +9,6 @@ from api.constants import SYMBOLS_QUANTITY
 class User(AbstractUser):
     """Модель User (пользователь)"""
 
-    ADMIN = 'admin'
-    USER = 'user'
-
-    ROLE_CHOICES = [
-        (ADMIN, 'Администратор'),
-        (USER, 'Пользователь'),
-    ]
     username = models.CharField(
         max_length=settings.MAX_LEN_USERNAME,
         unique=True,
@@ -42,12 +35,6 @@ class User(AbstractUser):
         unique=True,
         verbose_name='Пароль',
     )
-    role = models.CharField(
-        max_length=settings.MAX_LEN_ROLE,
-        choices=ROLE_CHOICES,
-        default=USER,
-        verbose_name='Роль',
-    )
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -56,10 +43,6 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username[:SYMBOLS_QUANTITY]
-
-    @property
-    def is_admin(self):
-        return self.role == self.ADMIN
 
 
 class Subscription(models.Model):

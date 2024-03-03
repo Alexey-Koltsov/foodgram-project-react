@@ -251,61 +251,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class APIFavoriteCreateDestroy(generics.CreateAPIView,
-                               generics.DestroyAPIView):
-    """
-    Добавляем рецепт в избранное и удаляем рецепт из избранного.
-    """
-
-    queryset = Favorite.objects.all()
-    serializer_class = FavoriteSerializer
-    permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
-
-    def create(self, request, *args, **kwargs):
-        recipes_list = list(Recipe.objects.values_list('id', flat=True))
-        recipes_in_favorite_list = list(self.get_queryset().filter(
-            user=request.user
-        ).values_list('recipe__id', flat=True))
-        if not self.kwargs['id'] in recipes_list:
-            return Response(
-                'Добавлять в избранное не существующие рецепты нельзя!',
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        if self.kwargs['id'] in recipes_in_favorite_list:
-            return Response(
-                f'Рецерт уже в избранном {request.user.username}!',
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED,
-                        headers=headers)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user,
-                        recipe=get_object_or_404(Recipe, id=self.kwargs['id']))
-
-    def destroy(self, request, *args, **kwargs):
-        recipe = get_object_or_404(Recipe, id=self.kwargs['id'])
-        recipes_in_favorite_list = list(self.get_queryset().filter(
-            user=request.user
-        ).values_list('recipe__id', flat=True))
-        if self.kwargs['id'] not in recipes_in_favorite_list:
-            return Response(
-                'В избранном нет такого рецепта!',
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        instance = get_object_or_404(
-            Favorite,
-            user=self.request.user,
-            recipe=recipe
-        )
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
 class APISubscriptionCreateDestroy(generics.CreateAPIView,
                                    generics.DestroyAPIView):
     """
@@ -353,6 +298,47 @@ class APISubscriptionCreateDestroy(generics.CreateAPIView,
             Subscription,
             user=self.request.user,
             author=author
+        )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class APIFavoriteCreateDestroy(generics.CreateAPIView,
+                               generics.DestroyAPIView):
+    """
+    Добавляем рецепт в избранное и удаляем рецепт из избранного.
+    """
+
+    queryset = Favorite.objects.all()
+    serializer_class = FavoriteSerializer
+    permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
+
+    def create(self, request, *args, **kwargs):
+        request.data['recipe'] = self.kwargs['id']
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED,
+                        headers=headers)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        recipe = get_object_or_404(Recipe, id=self.kwargs['id'])
+        if not self.get_queryset().filter(
+            user=request.user,
+            recipe__id=self.kwargs['id']
+        ).exists():
+            return Response(
+                f'В избранном {request.user.username} нет такого рецепта!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        instance = get_object_or_404(
+            Favorite,
+            user=self.request.user,
+            recipe=recipe
         )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
