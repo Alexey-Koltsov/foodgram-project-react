@@ -16,10 +16,12 @@ router_api_01.register('ingredients', IngredientViewSet,
 router_api_01.register('recipes', RecipeViewSet, basename='recipes')
 
 recipe_favorite_subscribe_urlpatterns = [
-    path('recipes/<int:id>/favorite/', APIFavoriteCreateDestroy.as_view()),
+    path('recipes/<int:id>/favorite/', APIFavoriteCreateDestroy.as_view(),
+         name='favorite'),
     path('recipes/<int:id>/shopping_cart/',
-         APIShoppingCartCreateDestroy.as_view()),
-    path('users/<int:id>/subscribe/', APISubscriptionCreateDestroy.as_view()),
+         APIShoppingCartCreateDestroy.as_view(), name='shopping_cart'),
+    path('users/<int:id>/subscribe/', APISubscriptionCreateDestroy.as_view(),
+         name='subscribe'),
 ]
 
 
