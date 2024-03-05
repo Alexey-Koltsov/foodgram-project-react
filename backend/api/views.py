@@ -175,7 +175,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return FileResponse(open('shopping_cart.txt', 'rb'),
                             as_attachment=True)
 
-    def create(self, request, *args, **kwargs):
+    """def create(self, request, *args, **kwargs):
         if 'tags' in request.data:
             request.data['tags'] = [
                 {'id': tag_id} for tag_id in request.data['tags']
@@ -185,12 +185,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED,
-                        headers=headers)
+                        headers=headers)"""
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def update(self, request, *args, **kwargs):
+    """def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         if 'tags' in request.data:
             request.data['tags'] = [
@@ -201,7 +201,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                                          partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        return Response(serializer.data)
+        return Response(serializer.data)"""
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
@@ -237,15 +237,13 @@ class APIFavoriteCreateDestroy(CustomCreateDestroyMixin):
     serializer_class = FavoriteSerializer
 
 
-class APISubscriptionCreateDestroy(generics.CreateAPIView,
-                                   generics.DestroyAPIView):
+class APISubscriptionCreateDestroy(CustomCreateDestroyMixin):
     """
     Добавляем автора в подписки и удаляем автора из подписок.
     """
 
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
-    permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
 
     def create(self, request, *args, **kwargs):
         get_object_or_404(User, id=self.kwargs['id'])
@@ -257,21 +255,18 @@ class APISubscriptionCreateDestroy(generics.CreateAPIView,
         return Response(serializer.data, status=status.HTTP_201_CREATED,
                         headers=headers)
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
     def destroy(self, request, *args, **kwargs):
         author = get_object_or_404(User, id=self.kwargs['id'])
-        subscriptions_id_list = list(self.get_queryset().filter(
-            user=self.request.user
-        ).values_list('author__id', flat=True))
-        if self.kwargs['id'] not in subscriptions_id_list:
+        if not self.get_queryset().filter(
+            user=request.user,
+            author__id=self.kwargs['id']
+        ).exists():
             return Response(
                 'Такой подписки не существует!',
                 status=status.HTTP_400_BAD_REQUEST
             )
         instance = get_object_or_404(
-            Subscription,
+            self.get_queryset(),
             user=self.request.user,
             author=author
         )
