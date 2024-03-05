@@ -4,7 +4,7 @@ from django.db.models.functions import Lower
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, render
 from djoser.serializers import SetPasswordSerializer
-from rest_framework import generics, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
@@ -151,7 +151,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(
         methods=['get'],
         serializer_class=SubscriptionToRepresentationSerializer,
-        permission_classes=[AllowAny],
+        permission_classes=[IsAuthenticated],
         detail=False,
         url_path='download_shopping_cart',
     )
@@ -163,45 +163,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(sum_amount=Sum('amount')))
-        file = open('shopping_cart.txt', "w")
+        file_name = 'shopping_cart.txt'
         row = ''
         for obj in ingredient_amount:
             for value in obj.values():
                 row += str(value) + ', '
             row = row[:-2]
             row += ';\n'
-        file.write(row)
-        file.close()
-        return FileResponse(open('shopping_cart.txt', 'rb'),
-                            as_attachment=True)
-
-    """def create(self, request, *args, **kwargs):
-        if 'tags' in request.data:
-            request.data['tags'] = [
-                {'id': tag_id} for tag_id in request.data['tags']
-            ]
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED,
-                        headers=headers)"""
+        response = FileResponse(row, content_type="text/plain,charset=utf8")
+        response['Content-Disposition'] = 'attachment; filename={0}'.format(
+            file_name
+        )
+        return response
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
-
-    """def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        if 'tags' in request.data:
-            request.data['tags'] = [
-                {'id': tag_id} for tag_id in request.data['tags']
-            ]
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data,
-                                         partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)"""
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):

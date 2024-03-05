@@ -2,7 +2,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import MaxLengthValidator, RegexValidator
-from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer
 from rest_framework import serializers
 
@@ -140,15 +139,9 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         source='ingredient.measurement_unit'
     )
 
-    def to_representation(self, obj):
-        """Возвращаем  ингредиент вместе с количеством."""
-
-        # print('type(obj): ', type(obj))
-        return super().to_representation(obj)
-
     class Meta:
         model = RecipeIngredient
-        fields = ('id', 'name', 'measurement_unit', 'amount')  # , 'amount'
+        fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
 class RecipeTagSerializer(serializers.ModelSerializer):
@@ -180,7 +173,9 @@ class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(read_only=True, many=True)
     image = serializers.SerializerMethodField()
     author = CustomUserSerializer(read_only=True)
-    ingredients = serializers.SerializerMethodField()  # serializers.SerializerMethodField()    RecipeIngredientSerializer(read_only=True, many=True)
+    ingredients = RecipeIngredientSerializer(
+        source='recipe_ingredient', read_only=True, many=True
+    )
     is_favorited = serializers.BooleanField()
     is_in_shopping_cart = serializers.BooleanField()
 
@@ -188,12 +183,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         if obj.image:
             return obj.image.url
         return None
-
-    def get_ingredients(self, obj):
-        # print((RecipeIngredient.objects.filter(recipe=obj).all()))
-        return RecipeIngredientSerializer(
-            RecipeIngredient.objects.filter(recipe=obj).all(), many=True
-        ).data
 
     class Meta:
         model = Recipe
@@ -287,31 +276,18 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'В запросе отсутствует поле ingredients'
             )
-        """if len(attrs['ingredients']) < 1:
-            raise serializers.ValidationError(
-                'Добавьте хотя бы один ингредиент.'
-            )"""
 
         if 'tags' not in attrs:
             raise serializers.ValidationError(
                 'В запросе отсутствует поле tags'
             )
-        """if len(attrs['tags']) < 1:
-            raise serializers.ValidationError(
-                'Добавьте хотя бы один тэг.'
-            )
-        tags = [tag['id'] for tag in self.context['request'].data['tags']]
-        if len(tags) != len(set(tags)):
-            raise serializers.ValidationError(
-                'В тэгах есть дубли!'
-            )"""
         return attrs
 
     def get_create_ingredients(self, recipe, ingredients):
         create_ingredients = [
             RecipeIngredient(
                 recipe=recipe,
-                ingredient=ingredient['ingredient'],  # get_object_or_404(Ingredient, id=ingredient['id'])
+                ingredient=ingredient['ingredient'],
                 amount=ingredient['amount']
             )
             for ingredient in ingredients
@@ -324,7 +300,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         create_tags = [
             RecipeTag(
                 recipe=recipe,
-                tag=tag['tag'],  # get_object_or_404(Tag, id=tag['id']),
+                tag=tag['tag'],
             )
             for tag in tags
         ]
