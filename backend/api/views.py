@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.db.models.functions import Lower
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import render
 from djoser.serializers import SetPasswordSerializer
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -220,34 +220,6 @@ class APISubscriptionCreateDestroy(CustomCreateDestroyMixin):
 
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
-
-    def create(self, request, *args, **kwargs):
-        get_object_or_404(User, id=self.kwargs['id'])
-        request.data['author'] = self.kwargs['id']
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED,
-                        headers=headers)
-
-    def destroy(self, request, *args, **kwargs):
-        author = get_object_or_404(User, id=self.kwargs['id'])
-        if not self.get_queryset().filter(
-            user=request.user,
-            author__id=self.kwargs['id']
-        ).exists():
-            return Response(
-                'Такой подписки не существует!',
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        instance = get_object_or_404(
-            self.get_queryset(),
-            user=self.request.user,
-            author=author
-        )
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class APIShoppingCartCreateDestroy(CustomCreateDestroyMixin):

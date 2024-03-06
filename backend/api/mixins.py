@@ -19,7 +19,11 @@ class CustomCreateDestroyMixin(generics.CreateAPIView,
     permission_classes = (IsAuthenticated, IsAuthorOrReadOnly)
 
     def create(self, request, *args, **kwargs):
-        request.data['recipe'] = self.kwargs['id']
+        if 'subscribe' in request.path_info:
+            get_object_or_404(User, id=self.kwargs['id'])
+            request.data['author'] = self.kwargs['id']
+        else:
+            request.data['recipe'] = self.kwargs['id']
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -31,19 +35,35 @@ class CustomCreateDestroyMixin(generics.CreateAPIView,
         serializer.save(user=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
-        recipe = get_object_or_404(Recipe, id=self.kwargs['id'])
-        if not self.get_queryset().filter(
-            user=request.user,
-            recipe__id=self.kwargs['id']
-        ).exists():
-            return Response(
-                'Этот рецепт не добавлен!',
-                status=status.HTTP_400_BAD_REQUEST
+        if 'subscribe' in request.path_info:
+            author = get_object_or_404(User, id=self.kwargs['id'])
+            if not self.get_queryset().filter(
+                user=request.user,
+                author__id=self.kwargs['id']
+            ).exists():
+                return Response(
+                    'Такой подписки не существует!',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            instance = get_object_or_404(
+                self.get_queryset(),
+                user=self.request.user,
+                author=author
             )
-        instance = get_object_or_404(
-            self.get_queryset(),
-            user=self.request.user,
-            recipe=recipe
-        )
+        else:
+            recipe = get_object_or_404(Recipe, id=self.kwargs['id'])
+            if not self.get_queryset().filter(
+                user=request.user,
+                recipe__id=self.kwargs['id']
+            ).exists():
+                return Response(
+                    'Этот рецепт не добавлен!',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            instance = get_object_or_404(
+                self.get_queryset(),
+                user=self.request.user,
+                recipe=recipe
+            )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
