@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.db.models.functions import Lower
 from django.http import FileResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from djoser.serializers import SetPasswordSerializer
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -209,7 +209,13 @@ class APIFavoriteCreateDestroy(CustomCreateDestroyMixin):
     Добавляем рецепт в избранное и удаляем рецепт из избранного.
     """
 
-    queryset = Favorite.objects.all()
+    def get_queryset(self):
+        get_object_or_404(Recipe, id=self.kwargs['id'])
+        return Favorite.objects.filter(
+            user=self.request.user,
+            recipe=self.kwargs['id']
+        )
+
     serializer_class = FavoriteSerializer
 
 
@@ -218,8 +224,18 @@ class APISubscriptionCreateDestroy(CustomCreateDestroyMixin):
     Добавляем автора в подписки и удаляем автора из подписок.
     """
 
-    queryset = Subscription.objects.all()
+    def get_queryset(self):
+        get_object_or_404(User, id=self.kwargs['id'])
+        return Subscription.objects.filter(
+            user=self.request.user,
+            author__id=self.kwargs['id']
+        )
+
+    def check(self):
+        return get_object_or_404(User, id=self.kwargs['id'])
+
     serializer_class = SubscriptionSerializer
+    lookup_field = 'author__id'
 
 
 class APIShoppingCartCreateDestroy(CustomCreateDestroyMixin):
@@ -227,5 +243,10 @@ class APIShoppingCartCreateDestroy(CustomCreateDestroyMixin):
     Добавляем рецепт в список покупок и удаляем рецепт из списка покупок.
     """
 
-    queryset = ShoppingCart.objects.all()
+    def get_queryset(self):
+        get_object_or_404(Recipe, id=self.kwargs['id'])
+        return ShoppingCart.objects.filter(
+            user=self.request.user,
+            recipe__id=self.kwargs['id']
+        )
     serializer_class = ShoppingCartSerializer
